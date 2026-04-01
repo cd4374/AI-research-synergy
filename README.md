@@ -172,6 +172,7 @@ Then: `claude --dangerously-skip-permissions`
 | 10 | `/ars-10-reviewer` | Cross-model adversarial project/paper review | **Yes** |
 | 11 | `/ars-11-gate-check` | Verify quality gate conditions | No |
 | 12 | `/ars-12-pipeline` | Orchestrate full workflow | Yes (for review) |
+| — | `/run-experiment` | Deploy experiments to local or remote GPU via SSH | No |
 
 ### Auto-Loop Modes
 
@@ -224,7 +225,7 @@ MAX_EXPERIMENT_HOURS: 8     # Skip long experiments
 POSITIVE_THRESHOLD: 7       # Score to stop review loop
 ```
 
-GPU servers in `PROJECT_STATE.md` Config section (filled in by `/ars-02-environment`).
+Remote GPU server config in `PROJECT_STATE.md → ## Remote Server` (fill in per project).
 
 ## License
 

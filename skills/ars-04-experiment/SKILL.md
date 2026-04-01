@@ -127,36 +127,34 @@ python evaluate.py --results_dir results/{exp_id}/
 ```
 
 **Remote GPU execution:**
+
+Delegate to `/run-experiment` which handles CLAUDE.md config, rsync sync, screen launch, and GPU selection automatically:
+
+```
+/run-experiment <exp_id> — seeds: 42,123,456
+```
+
+`/run-experiment` will:
+1. Read `CLAUDE.md → ## GPU Server` for SSH alias, conda path, workdir
+2. Check GPU availability on the server
+3. Sync code via rsync (or git if `code_sync: git`)
+4. Launch one `screen` session per seed (parallel if GPUs available, sequential otherwise)
+5. Report which GPUs and screen sessions are running
+
+After launch, monitor and collect results when done:
 ```bash
-# Sync code to server
-rsync -avz src/ {user}@{host}:{workdir}/src/
-rsync -avz configs/ {user}@{host}:{workdir}/configs/
+# Check progress
+ssh <server> "tail -30 <workdir>/results/<exp_id>/train.log"
 
-# Launch in screen/tmux (survives disconnects)
-ssh {user}@{host} "cd {workdir} && screen -dmS {exp_id} bash -c '
-  export CUDA_VISIBLE_DEVICES={gpu_subset}   # omit line if GPU Subset is all/unset
-  conda run -n {selected_env} pip install -r src/requirements.txt &&
-  conda run -n {selected_env} python src/train.py --config configs/{exp_id}.yaml --seed 42 &&
-  conda run -n {selected_env} python src/train.py --config configs/{exp_id}.yaml --seed 123 &&
-  conda run -n {selected_env} python src/train.py --config configs/{exp_id}.yaml --seed 456 &&
-  conda run -n {selected_env} python src/evaluate.py --results_dir results/{exp_id}/
-'"
-
-# Check status
-ssh {user}@{host} "screen -ls"
+# Sync results back when complete
+rsync -avz <server>:<workdir>/results/<exp_id>/ results/<exp_id>/
 ```
 
 ### Step 5 — Monitor and Collect
 
-Check experiment progress:
-- `ssh {host} "tail -20 {workdir}/results/{exp_id}/train.log"`
-- `ssh {host} "cat {workdir}/results/{exp_id}/metrics.json"`
+For local runs: check the process and GPU allocation with `nvidia-smi`.
 
-When complete:
-```bash
-# Sync results back
-rsync -avz {user}@{host}:{workdir}/results/{exp_id}/ results/{exp_id}/
-```
+For remote runs, use the commands shown above (`tail` log, `rsync` results back). Alternatively, call `/run-experiment` with a monitor argument to poll status.
 
 ### Step 6 — Log Results
 

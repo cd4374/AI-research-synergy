@@ -94,8 +94,12 @@ If none qualify:
 ### Step 1 — Read State and User Target
 - Read `PROJECT_STATE.md` if it exists; if not, stop and tell the user to run `/ars-01-coordinator` first
 - Parse `target=` if provided; if none, use `auto`
-- Read `~/.ars/config.yml` for `gpu_servers`; if file is missing, treat `gpu_servers` as empty and continue
-- If `target=remote_gpu` but `gpu_servers` is empty, stop and tell the user to add a server to `~/.ars/config.yml`
+- Read `PROJECT_STATE.md` for a `## Remote Server` section. Look for:
+  - `gpu: remote` — indicates a remote SSH server is configured
+  - `ssh:` — SSH alias configured in `~/.ssh/config`
+  - `conda:`, `workdir:` — server-side details
+  - If the section is absent or `gpu` key is missing, treat remote as unconfigured
+- If `target=remote_gpu` but `PROJECT_STATE.md` has no `## Remote Server` with `gpu: remote`, stop and tell the user to add the section (see `/run-experiment` for the template)
 
 ### Step 2 — Detect Capabilities
 Run non-destructive checks such as:
@@ -238,7 +242,7 @@ Apply this order unless user explicitly overrides:
 Rules:
 - `local_gpu` requires visible local NVIDIA GPU support
 - `local_mps` requires Apple Silicon / MPS support
-- `remote_gpu` requires configured `GPU_SERVERS` plus `ssh` and `rsync`
+- `remote_gpu` requires a `## Remote Server` section in `PROJECT_STATE.md` with `gpu: remote`, plus `ssh` and `rsync` available locally
 - `local_cpu` is always the final fallback
 
 Selection algorithm:
@@ -311,7 +315,7 @@ Update `PROJECT_STATE.md` with:
 - **Environment Created**: {yes | no}
 - **Hardware Summary**: {e.g. GPU 0: A100 80GB, GPU 1: A100 80GB | MPS available | CPU only}
 - **Software Summary**: {e.g. conda yes, pip yes, ssh yes, rsync no}
-- **Remote Summary**: {e.g. GPU_SERVERS configured | not configured}
+- **Remote Summary**: {e.g. PROJECT_STATE.md gpu:remote configured (ssh: ars-gpu) | not configured}
 - **Constraints**: {comma-separated blockers or limitations}
 - **Implementation Guidance**: {short instruction for `/ars-04-experiment`}
 
@@ -337,7 +341,7 @@ Update `PROJECT_STATE.md` with:
 
 When executing this skill, use this sequence:
 1. Read `PROJECT_STATE.md`
-2. Read `CLAUDE.md` to check `GPU_SERVERS`
+2. Read `PROJECT_STATE.md` to check `## Remote Server` section for `gpu: remote`
 3. Run capability checks (Step 2)
 4. Run ARS toolchain checks (Step 2.5) — **must complete before Step 4**
 5. Resolve selected target

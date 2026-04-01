@@ -71,6 +71,15 @@ pending
 ## Active Decisions
 <!-- Pending pivot or scope decisions -->
 
+## Remote Server
+<!-- Fill in when using remote GPU. Leave gpu: local if running locally. -->
+- gpu: local | remote
+- ssh: {your-ssh-alias}         # SSH alias from ~/.ssh/config
+- conda: {/path/to/conda}       # e.g. /home/user/anaconda3
+- workdir: {/remote/project/}   # absolute path on server
+- code_sync: rsync              # rsync (default) or git
+- wandb: false                  # true to enable W&B logging
+
 ## Config
 - AUTO_PROCEED: true
 - MAX_REVIEW_ROUNDS: 6
