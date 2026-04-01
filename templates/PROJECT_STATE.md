@@ -34,6 +34,8 @@ pending
 ## Runtime Environment
 - **Target Preference**: auto (priority: local_gpu > local_mps > remote_gpu > local_cpu)
 - **Selected Mode**: pending
+- **GPU Subset**: pending
+- **CUDA_VISIBLE_DEVICES**: pending
 - **Conda Strategy**: reuse_existing_first
 - **Selected Conda Env**: pending
 - **Selected Python**: pending

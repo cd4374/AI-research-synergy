@@ -19,10 +19,16 @@ setup environment, 环境检测, 运行环境, conda环境, MPS
 /ars-02-environment
 /ars-02-environment target=auto
 /ars-02-environment target=local_gpu
+/ars-02-environment target=local_gpu gpu_ids=0
+/ars-02-environment target=local_gpu gpu_ids=0,2
 /ars-02-environment target=local_mps
 /ars-02-environment target=remote_gpu
 /ars-02-environment target=local_cpu
 ```
+
+`gpu_ids` is optional and only applies to `local_gpu` targets. Accepts a
+comma-separated list of NVIDIA device indices (e.g. `0`, `0,1`, `2,3`).
+Omit to use all visible GPUs.
 
 ## Supported Targets
 
@@ -60,7 +66,7 @@ setup environment, 环境检测, 运行环境, conda环境, MPS
 - `screen` or `tmux`
 
 ### Remote
-- Whether `GPU_SERVERS` is configured in `CLAUDE.md`
+- Whether `GPU_SERVERS` is configured in `PROJECT_STATE.md` (Config section)
 - Whether local machine has tools needed to launch remote jobs
 
 ## Conda Policy
@@ -72,6 +78,9 @@ A conda env is considered **usable** if:
 - Python version meets the minimum required version
 - It is compatible with the selected target runtime
 - It does **not** need to already contain all task-specific packages
+- It is **not** the `base` environment
+
+**Never select `base`**: `base` is reserved for conda's own tooling. Always prefer a named env; if none qualifies, create a new one.
 
 If multiple envs qualify:
 - choose the one that best matches the selected target
@@ -83,10 +92,10 @@ If none qualify:
 ## Procedure
 
 ### Step 1 — Read State and User Target
-- Read `PROJECT_STATE.md` if it exists
-- Parse `target=` if provided
-- If no explicit target, use `auto`
-- If `PROJECT_STATE.md` does not exist yet, stop and tell the user to run `/ars-01-coordinator` first
+- Read `PROJECT_STATE.md` if it exists; if not, stop and tell the user to run `/ars-01-coordinator` first
+- Parse `target=` if provided; if none, use `auto`
+- Read `~/.ars/config.yml` for `gpu_servers`; if file is missing, treat `gpu_servers` as empty and continue
+- If `target=remote_gpu` but `gpu_servers` is empty, stop and tell the user to add a server to `~/.ars/config.yml`
 
 ### Step 2 — Detect Capabilities
 Run non-destructive checks such as:
@@ -97,7 +106,8 @@ Run non-destructive checks such as:
 - `ssh -V`
 - `rsync --version`
 - `screen --version` or `tmux -V`
-- `nvidia-smi` for NVIDIA GPU
+- `nvidia-smi` for NVIDIA GPU presence
+- `nvidia-smi --query-gpu=index,name,memory.total,memory.free --format=csv,noheader` for per-GPU details (only when `nvidia-smi` is present)
 - Python checks for MPS capability when relevant
 
 These checks are mandatory. Do not skip them and do not infer capabilities from documentation alone.
@@ -113,6 +123,7 @@ ssh -V
 rsync --version
 screen --version || tmux -V
 nvidia-smi
+nvidia-smi --query-gpu=index,name,memory.total,memory.free --format=csv,noheader 2>/dev/null
 python - <<'PY'
 import platform
 print(platform.platform())
@@ -236,6 +247,19 @@ Selection algorithm:
 - If target is `auto`, choose the first available target in the default priority order
 - Always record both the requested target and the final selected mode
 
+#### GPU Subset Selection (`gpu_ids`)
+
+When target is `local_gpu`, also resolve the GPU subset:
+
+1. Parse `gpu_ids` from user input. Accepted formats: `0`, `0,1`, `0,2,3`.
+2. If `gpu_ids` is provided:
+   - Validate each ID exists in `nvidia-smi` output. If any ID is invalid, stop and report the bad IDs plus the list of valid ones.
+   - Set `GPU Subset` to the provided value (e.g. `0,2`).
+   - Set `CUDA_VISIBLE_DEVICES` accordingly.
+3. If `gpu_ids` is **not** provided:
+   - Set `GPU Subset` to `all` (use all visible GPUs, no `CUDA_VISIBLE_DEVICES` override).
+4. Record the available GPU list in `Hardware Summary` (index, name, VRAM) so future skills can reference it.
+
 ### Step 4 — Resolve Conda Environment
 - If conda is unavailable: record that clearly, set `Selected Conda Env: none`, and continue only with documentation-level guidance
 - If conda is available: inspect existing envs
@@ -245,7 +269,7 @@ Selection algorithm:
 Conda resolution is mandatory for automatic execution. If conda exists but env inspection, reuse, or creation fails, stop and report the blocker instead of silently proceeding.
 
 Reuse algorithm:
-- Enumerate all conda envs
+- Enumerate all conda envs, **skip `base`**
 - For each env, test `conda run -n {env} python --version`
 - Prefer env names containing the target hint (`gpu`, `mps`, `cpu`, `remote`)
 - If no hinted env qualifies, reuse the first env that satisfies the usability rule
@@ -279,11 +303,13 @@ Update `PROJECT_STATE.md` with:
 ## Runtime Environment
 - **Target Preference**: {requested_target or auto}
 - **Selected Mode**: {local_gpu | local_mps | remote_gpu | local_cpu}
+- **GPU Subset**: {all | comma-separated indices e.g. 0,2 | N/A}
+- **CUDA_VISIBLE_DEVICES**: {value to export, or "unset" if all GPUs are used}
 - **Conda Strategy**: reuse_existing_first
 - **Selected Conda Env**: {env_name | none}
 - **Selected Python**: {python_version | unknown}
 - **Environment Created**: {yes | no}
-- **Hardware Summary**: {e.g. NVIDIA GPU x1 visible | MPS available | CPU only}
+- **Hardware Summary**: {e.g. GPU 0: A100 80GB, GPU 1: A100 80GB | MPS available | CPU only}
 - **Software Summary**: {e.g. conda yes, pip yes, ssh yes, rsync no}
 - **Remote Summary**: {e.g. GPU_SERVERS configured | not configured}
 - **Constraints**: {comma-separated blockers or limitations}
@@ -328,6 +354,7 @@ Automatic execution contract:
 Selected mode: local_mps
 Conda env: ars-local-mps (reused)
 Python: 3.11
+GPU Subset: N/A (MPS target)
 Constraints: no local NVIDIA GPU, remote GPU not configured
 
 ARS Toolchain:

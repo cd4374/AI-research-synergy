@@ -20,6 +20,39 @@ scope, milestone, pivot, replan, 规划, 分解任务, 研究计划
 
 ## Procedure
 
+### Step 0 — Check ARS User Config
+
+Check whether `~/.ars/config.yml` exists:
+
+```bash
+ls ~/.ars/config.yml 2>/dev/null
+```
+
+- **Not found**: create `~/.ars/config.yml` from the template below, print it, and ask the user to fill in any GPU servers (or leave `gpu_servers: []` to use local environment). **Pause and wait before continuing.**
+- **Found**: read it silently and continue.
+
+Template to generate if missing:
+
+```yaml
+# ARS User Configuration
+# This file is machine-local and should NOT be committed to git.
+
+gpu_servers: []
+# Uncomment and fill in to enable remote GPU execution:
+# gpu_servers:
+#   - name: server1
+#     host: your-gpu-server.example.com
+#     user: researcher
+#     key: ~/.ssh/id_rsa     # use key OR password, not both
+#     # password: yourpassword
+#     gpu_count: 4
+#     workdir: /home/researcher/ars-runs
+
+# Optional: override default settings
+# codex_model: gpt-4o        # model used for cross-model review
+# auto_proceed: true         # skip human checkpoints
+```
+
 ### Step 1 — Understand the Brief
 
 Read the research brief. Extract:

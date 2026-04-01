@@ -36,6 +36,11 @@ Environment rules:
 - Reuse the recorded conda environment by default; only propose a new one if the recorded choice is missing or invalid
 - If `Selected Conda Env` is `none`, do not assume `conda run`; emit plain `python` / `pip` commands that match the detected environment and note the limitation in `README_run.md`
 
+**GPU Subset**: read `CUDA_VISIBLE_DEVICES` from `PROJECT_STATE.md`.
+- If value is `unset` or field is absent → do not set `CUDA_VISIBLE_DEVICES`; all GPUs are used
+- If value is a device list (e.g. `0,2`) → prepend `CUDA_VISIBLE_DEVICES=0,2` to every training and evaluation command
+- For remote execution, export the variable inside the screen/tmux command block
+
 If the requested experiment conflicts with the selected environment, log a blocker or a degraded execution plan instead of silently assuming a different runtime.
 
 ### Step 1 — Design Experiment Spec
@@ -99,6 +104,9 @@ Record any execution-facing note in `EXPERIMENT_LOG.md`.
 
 **Local execution (with conda):**
 ```bash
+# If CUDA_VISIBLE_DEVICES is set (GPU Subset != all/unset):
+export CUDA_VISIBLE_DEVICES={gpu_subset}   # e.g. 0,2
+
 conda run -n {selected_env} pip install -r requirements.txt
 conda run -n {selected_env} python train.py --config configs/{exp_id}.yaml --seed 42
 conda run -n {selected_env} python train.py --config configs/{exp_id}.yaml --seed 123
@@ -108,6 +116,9 @@ conda run -n {selected_env} python evaluate.py --results_dir results/{exp_id}/
 
 **Local execution (without conda):**
 ```bash
+# If CUDA_VISIBLE_DEVICES is set:
+export CUDA_VISIBLE_DEVICES={gpu_subset}
+
 pip install -r requirements.txt
 python train.py --config configs/{exp_id}.yaml --seed 42
 python train.py --config configs/{exp_id}.yaml --seed 123
@@ -123,6 +134,7 @@ rsync -avz configs/ {user}@{host}:{workdir}/configs/
 
 # Launch in screen/tmux (survives disconnects)
 ssh {user}@{host} "cd {workdir} && screen -dmS {exp_id} bash -c '
+  export CUDA_VISIBLE_DEVICES={gpu_subset}   # omit line if GPU Subset is all/unset
   conda run -n {selected_env} pip install -r src/requirements.txt &&
   conda run -n {selected_env} python src/train.py --config configs/{exp_id}.yaml --seed 42 &&
   conda run -n {selected_env} python src/train.py --config configs/{exp_id}.yaml --seed 123 &&

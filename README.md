@@ -57,6 +57,8 @@ claude> /ars-12-pipeline "your research topic"
 # Or step by step
 claude> /ars-01-coordinator "research brief"
 claude> /ars-02-environment target=auto
+claude> /ars-02-environment target=local_gpu gpu_ids=0      # single GPU
+claude> /ars-02-environment target=local_gpu gpu_ids=0,2    # specific GPUs
 claude> /ars-03-literature "topic keywords"
 claude> /ars-04-experiment
 claude> /ars-07-analysis
@@ -77,6 +79,7 @@ claude> /ars-05-implementation-review
 
 /ars-02-environment target=auto
   → Selects local_gpu/local_mps/remote_gpu/local_cpu, reuses or creates conda env, updates PROJECT_STATE.md
+  → Add gpu_ids=0,2 to restrict to specific GPUs (local_gpu only); CUDA_VISIBLE_DEVICES propagated automatically
 
 /ars-03-literature "few-shot time-series augmentation"
   → Finds 12 papers, builds SOTA table, adds 8 evidence items to EVIDENCE.md
@@ -221,7 +224,7 @@ MAX_EXPERIMENT_HOURS: 8     # Skip long experiments
 POSITIVE_THRESHOLD: 7       # Score to stop review loop
 ```
 
-GPU servers in `CLAUDE.md` (see template).
+GPU servers in `PROJECT_STATE.md` Config section (filled in by `/ars-02-environment`).
 
 ## License
 

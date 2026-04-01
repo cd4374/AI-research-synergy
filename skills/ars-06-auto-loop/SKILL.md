@@ -69,7 +69,13 @@ Auto-loop config:
   time_budget_minutes: 5              # Fixed per run
   max_iterations: 50                  # Safety cap
   branch: autoloop/{date}            # Git branch for tracking
+  cuda_visible_devices: {value from PROJECT_STATE.md CUDA_VISIBLE_DEVICES, or unset}
 ```
+
+**GPU Subset**: before running any training command, read `CUDA_VISIBLE_DEVICES` from
+`PROJECT_STATE.md → Runtime Environment`. If the value is not `unset`, prepend it to
+every `python` and `conda run` call in the loop. Propagate the same value inside
+remote ssh/screen blocks.
 
 ### Procedure
 
@@ -95,7 +101,8 @@ REPEAT:
      - Simplicity criterion: if improvement is tiny but adds complexity, discard
   c. Edit src/train.py
   d. git commit -m "autoloop: {short description}"
-  e. Run: timeout {budget}m python src/train.py > run.log 2>&1
+  e. Run: CUDA_VISIBLE_DEVICES={gpu_subset} timeout {budget}m python src/train.py > run.log 2>&1
+     (omit CUDA_VISIBLE_DEVICES prefix if GPU Subset is all/unset)
   f. Extract: grep "^val_loss:" run.log
      - If empty → crash. Read tail -50 run.log. Fix if trivial, else skip.
   g. Record in results.tsv
@@ -229,7 +236,7 @@ REPEAT:
 Auto-loop config:
   mode: hyperparam
   target_file: configs/{exp_id}.yaml
-  eval_command: python src/train.py --config configs/{exp_id}.yaml
+  eval_command: CUDA_VISIBLE_DEVICES={gpu_subset} python src/train.py --config configs/{exp_id}.yaml
   metric_key: val_accuracy
   metric_direction: maximize
   search_space:
