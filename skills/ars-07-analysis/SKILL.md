@@ -144,6 +144,7 @@ Check `CLAIMS.md`. For each existing claim:
 - Can it now be supported by new evidence? → Add link
 - Is it contradicted by evidence? → Flag as `needs_revision`
 - Is evidence insufficient? → Note what additional experiments are needed
+- If the mapping is high-risk, ambiguous, or high-severity → request external review before promoting the claim
 
 ## Output
 
@@ -156,5 +157,6 @@ Check `CLAIMS.md`. For each existing claim:
 ## Boundaries
 
 - **DO**: Compute statistics, generate figures, register evidence, identify patterns
+- **DO**: Escalate to external review for risky result-to-claim mappings when needed
 - **DO NOT**: Write paper prose, run new experiments, modify experiment code, hide negative results
 - If results are inconclusive → say so clearly, suggest additional experiments for `/ars-01-coordinator`

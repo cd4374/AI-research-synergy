@@ -33,6 +33,13 @@ The **reviewer** and **implementation-review** skills use Codex MCP to call an
 external LLM (GPT-5.4 xhigh or equivalent) for adversarial review. Claude Code
 never reviews its own work.
 
+Cross-model collaboration is **selective, not universal**:
+- **Level 0 — Default execution**: Claude executes routine steps alone
+- **Level 1 — Mandatory review**: external review is required at Gates `C1`, `F1`, and `G1`
+- **Level 2 — Triggered escalation**: request external review for novelty uncertainty, stalled review progress, experiments estimated above 2 GPU-hours, high/critical-severity claims, evaluator or fairness risk, or anomalous results that need an alternative explanation
+
+Codex should act as a **reviewer/challenger at high-risk reasoning boundaries**, not as a co-pilot for every procedural step.
+
 Setup: `claude mcp add codex -s user -- codex mcp-server`
 
 If Codex MCP is unavailable, those skills should clearly state that cross-model

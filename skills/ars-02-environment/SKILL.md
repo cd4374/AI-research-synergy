@@ -126,6 +126,97 @@ except Exception as e:
 PY
 ```
 
+### Step 2.5 — ARS Toolchain Check
+
+Check all external tools and services that ARS skills depend on. This is mandatory
+and must complete before environment selection. Failures are classified as either
+**blocking** (pipeline cannot run at all) or **degraded** (specific skills will fall
+back to reduced functionality).
+
+#### 2.5.1 — Codex MCP Server
+
+```bash
+# Check if codex CLI is installed
+codex --version 2>/dev/null || npx @openai/codex --version 2>/dev/null
+
+# Check if codex mcp-server is registered in Claude MCP config
+claude mcp list 2>/dev/null | grep -i codex
+```
+
+Interpret results:
+
+| State | Classification | Effect |
+|-------|---------------|--------|
+| `codex` binary found AND listed in `claude mcp list` | **ready** | Full cross-model review available |
+| `codex` binary found but NOT in `claude mcp list` | **misconfigured** | Run `claude mcp add codex -s user -- codex mcp-server` to fix |
+| `codex` NOT found, `npm`/`npx` available | **installable** | Can fix with `npm install -g @openai/codex` |
+| neither `codex` nor `npm`/`npx` found | **unavailable** | Degraded: mandatory gates C1/F1/G1 will use self-review with disclaimer |
+
+Record the status as one of: `ready | misconfigured | installable | unavailable`
+
+#### 2.5.2 — npm / npx (required to install Codex)
+
+```bash
+npm --version 2>/dev/null
+npx --version 2>/dev/null
+node --version 2>/dev/null
+```
+
+#### 2.5.3 — Web Search capability
+
+```bash
+# Claude Code's WebSearch tool is built-in; check if any proxy/firewall blocks it
+# by attempting a minimal fetch (do NOT call WebSearch here — just note it as assumed available)
+```
+
+Record: `assumed_available` (WebSearch is a built-in Claude Code tool, cannot be
+independently probed from shell; mark unavailable only if the user has reported
+it failing in this session).
+
+#### 2.5.4 — arXiv / Semantic Scholar reachability (optional)
+
+```bash
+curl -s --max-time 5 -o /dev/null -w "%{http_code}" https://arxiv.org/ 2>/dev/null
+curl -s --max-time 5 -o /dev/null -w "%{http_code}" https://api.semanticscholar.org/ 2>/dev/null
+```
+
+HTTP 200 or 301/302 → reachable. Timeout / connection refused → blocked (lit review
+will be limited to cached/offline sources).
+
+#### 2.5.5 — Git (required for auto-loop branch isolation)
+
+```bash
+git --version
+git -C . rev-parse --is-inside-work-tree 2>/dev/null
+```
+
+Git missing or not in a git repo → auto-loop branch isolation will be **skipped**
+(loop still runs, but without `git reset` safety net; log this as a risk).
+
+#### 2.5.6 — Produce Toolchain Summary
+
+After all checks, produce a structured summary table:
+
+```
+ARS Toolchain Status:
+  codex_mcp:      ready | misconfigured | installable | unavailable
+  npm_npx:        yes | no
+  web_search:     assumed_available | reported_unavailable
+  arxiv:          reachable | unreachable
+  semantic_scholar: reachable | unreachable
+  git:            yes (in repo) | yes (no repo) | no
+```
+
+**Blocking conditions** (stop pipeline, do not proceed to Gate A0):
+- None by default. Codex MCP unavailability is degraded, not blocking.
+
+**Degraded conditions** (proceed but record limitations):
+- `codex_mcp: misconfigured` → print fix instructions and ask user to resolve before running Gate C1/F1/G1
+- `codex_mcp: installable` → print install command, offer to run it, continue if user declines
+- `codex_mcp: unavailable` → mandatory review gates will use self-review fallback; log in `PROJECT_STATE.md`
+- `arxiv: unreachable` → literature search limited to Semantic Scholar and WebSearch
+- `git: yes (no repo)` → auto-loop will run without branch isolation; flag as risk
+
 ### Step 3 — Select Target
 Apply this order unless user explicitly overrides:
 1. `local_gpu`
@@ -197,6 +288,17 @@ Update `PROJECT_STATE.md` with:
 - **Remote Summary**: {e.g. GPU_SERVERS configured | not configured}
 - **Constraints**: {comma-separated blockers or limitations}
 - **Implementation Guidance**: {short instruction for `/ars-04-experiment`}
+
+## ARS Toolchain
+- **Codex MCP**: {ready | misconfigured | installable | unavailable}
+- **Codex MCP Note**: {fix instructions if not ready, else "none"}
+- **npm/npx**: {yes | no}
+- **WebSearch**: {assumed_available | reported_unavailable}
+- **arXiv**: {reachable | unreachable}
+- **Semantic Scholar**: {reachable | unreachable}
+- **Git**: {yes_in_repo | yes_no_repo | no}
+- **Cross-Model Review**: {full | degraded_self_review}
+- **Toolchain Checked**: {date}
 ```
 
 ## Output
@@ -210,11 +312,12 @@ Update `PROJECT_STATE.md` with:
 When executing this skill, use this sequence:
 1. Read `PROJECT_STATE.md`
 2. Read `CLAUDE.md` to check `GPU_SERVERS`
-3. Run capability checks
-4. Resolve selected target
-5. Resolve/reuse/create conda env if possible
-6. Update `PROJECT_STATE.md`
-7. Print a concise summary like:
+3. Run capability checks (Step 2)
+4. Run ARS toolchain checks (Step 2.5) — **must complete before Step 4**
+5. Resolve selected target
+6. Resolve/reuse/create conda env if possible
+7. Update `PROJECT_STATE.md` (Runtime Environment + ARS Toolchain sections)
+8. Print a concise summary like:
 
 Automatic execution contract:
 - A successful run must produce a populated `Runtime Environment` section in `PROJECT_STATE.md`
@@ -226,6 +329,15 @@ Selected mode: local_mps
 Conda env: ars-local-mps (reused)
 Python: 3.11
 Constraints: no local NVIDIA GPU, remote GPU not configured
+
+ARS Toolchain:
+  codex_mcp:        ready
+  npm/npx:          yes
+  web_search:       assumed_available
+  arxiv:            reachable
+  semantic_scholar: reachable
+  git:              yes (in repo)
+  cross_model_review: full
 ```
 
 ## Boundaries

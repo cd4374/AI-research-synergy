@@ -8,8 +8,10 @@
 ```markdown
 ## Review Round {N} — {date}
 - **Reviewer**: {model name via Codex MCP}
+- **Review Type**: mandatory | triggered
 - **Gate**: {gate ID}
 - **Artifact Reviewed**: {what was reviewed}
+- **Escalation Reason**: none | high_cost | novelty_uncertainty | evaluator_risk | fairness_risk | anomalous_result | review_stall
 - **Overall Score**: {score}/10
 - **Verdict**: accept | revise | reject
 

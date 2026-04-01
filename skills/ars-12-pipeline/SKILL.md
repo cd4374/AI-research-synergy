@@ -33,6 +33,16 @@ POSITIVE_THRESHOLD: 7       # Review score to consider "good enough"
 REVIEW_MODEL: codex xhigh   # External model for review
 ```
 
+## Review Routing Policy
+
+The pipeline uses **selective cross-model collaboration**:
+
+- **Level 0 — Default**: Claude executes routine procedural work alone
+- **Level 1 — Mandatory review**: external review is required at Gates `C1`, `F1`, and `G1`
+- **Level 2 — Triggered escalation**: external review is requested when work is high-cost, high-severity, stalled, ambiguous, fairness-sensitive, or produces anomalous results
+
+Codex is a **reviewer/challenger**, not a universal co-pilot for every step.
+
 ## Pipeline Flow
 
 ```
@@ -104,60 +114,64 @@ START
 1. Call /ars-01-coordinator with the research brief
 2. Call /ars-02-environment target=auto (or user-specified target)
 3. Verify that `PROJECT_STATE.md` now contains a populated `Runtime Environment` section
-4. Call /ars-11-gate-check A0
-5. If environment detection or A0 fails → stop or fix the blocker before proceeding
-6. Checkpoint: save state
+4. Keep review at Level 0 unless a trigger condition already applies
+5. Call /ars-11-gate-check A0
+6. If environment detection or A0 fails → stop or fix the blocker before proceeding
+7. Checkpoint: save state
 ```
 
 ### Phase 2 — Literature
 
 ```
-7. Read tasks from PROJECT_STATE.md (LIT-* tasks)
-8. Call /ars-03-literature for each literature task
-9. Call /ars-11-gate-check B1
-10. If B1 fails → identify what's missing → /ars-03-literature again
-11. Checkpoint: save state
+8. Read tasks from PROJECT_STATE.md (LIT-* tasks)
+9. Call /ars-03-literature for each literature task
+10. Keep review at Level 0 unless novelty uncertainty or ambiguity triggers escalation
+11. Call /ars-11-gate-check B1
+12. If B1 fails → identify what's missing → /ars-03-literature again
+13. Checkpoint: save state
 ```
 
 ### Phase 3 — Experiment Design
 
 ```
-12. Call /ars-01-coordinator (replan) — design experiments based on lit findings
-13. Call /ars-10-reviewer on experiment plan (Gate C1 rubric)
-14. Call /ars-11-gate-check C1
-15. If C1 fails → /ars-01-coordinator revises plan → re-review
-16. Checkpoint: save state
+14. Call /ars-01-coordinator (replan) — design experiments based on lit findings
+15. Mandatory Level 1 review: call /ars-10-reviewer on the experiment plan (Gate C1 rubric)
+16. Call /ars-11-gate-check C1
+17. If C1 fails → /ars-01-coordinator revises plan → re-review
+18. Checkpoint: save state
 ```
 
 ### Phase 4 — Experiment Execution (Auto-Loop Enabled)
 
 ```
-17. Read tasks from PROJECT_STATE.md (EXP-* tasks)
-18. Call /ars-04-experiment to write initial code and establish baseline
+19. Read tasks from PROJECT_STATE.md (EXP-* tasks)
+20. Call /ars-04-experiment to write initial code and establish baseline
     - Must read selected environment and conda decision from `PROJECT_STATE.md`
     - Must adapt implementation/runtime for local_gpu, local_mps, remote_gpu, or local_cpu
-19. Optional: call /ars-05-implementation-review before major runs, custom eval work, or material code changes
+21. Trigger Level 2 review when runs are high-cost, fairness-sensitive, or evaluator-critical
+22. Optional: call /ars-05-implementation-review before major runs, custom eval work, or material code changes
     - Use it to catch spec-to-code mismatches, leakage, unfair baselines, or eval drift
-20. If AUTO_LOOP_EXPERIMENTS enabled (default: true):
+23. If AUTO_LOOP_EXPERIMENTS enabled (default: true):
     a. /ars-06-auto-loop mode=experiment — iterate on model/training code
        (Karpathy loop: modify → train → measure → keep/discard)
     b. /ars-06-auto-loop mode=hyperparam — sweep hyperparameters on best code
     c. Best results automatically registered in EVIDENCE.md
-21. If AUTO_LOOP_EXPERIMENTS disabled:
+24. If AUTO_LOOP_EXPERIMENTS disabled:
     a. For each experiment task: /ars-04-experiment → run → collect
     b. If failed → classify failure → retry or escalate
-22. Call /ars-11-gate-check D1
-23. If D1 fails → identify incomplete experiments → retry
-24. Checkpoint: save state
+25. Call /ars-11-gate-check D1
+26. If D1 fails → identify incomplete experiments → retry
+27. Checkpoint: save state
 ```
 
 ### Phase 5 — Analysis
 
 ```
-25. Call /ars-07-analysis on all completed experiment results
-26. Call /ars-11-gate-check E1
-27. If E1 fails → identify gaps → /ars-07-analysis again
-28. Checkpoint: save state
+28. Call /ars-07-analysis on all completed experiment results
+29. Trigger Level 2 review for risky result-to-claim mappings or anomalous patterns
+30. Call /ars-11-gate-check E1
+31. If E1 fails → identify gaps → /ars-07-analysis again
+32. Checkpoint: save state
 ```
 
 ### Phase 5.5 — Figure Polish (VLM Critique Loop)
@@ -175,12 +189,13 @@ START
 ### Phase 6 — Writing
 
 ```
-31. Call /ars-09-writer to draft all paper sections
+33. Call /ars-09-writer to draft all paper sections
     (uses figures/FIGURE_NOTES.md for accurate figure references)
-32. Call /ars-11-gate-check F1
-33. If F1 fails → identify issues (missing evidence, bad citations)
+34. Mandatory Level 1 review: call /ars-10-reviewer for draft/claim-evidence scrutiny before Gate F1
+35. Call /ars-11-gate-check F1
+36. If F1 fails → identify issues (missing evidence, bad citations)
     → /ars-09-writer fixes → recheck
-34. Checkpoint: save state
+37. Checkpoint: save state
 ```
 
 ### Phase 7 — Review Loop (Auto-Loop Enabled)
@@ -204,11 +219,12 @@ START
 ### Phase 8 — Final Gate
 
 ```
-38. Call /ars-11-gate-check G1
-39. If G1 passes:
+41. Mandatory Level 1 review: call /ars-10-reviewer for the final adversarial pass
+42. Call /ars-11-gate-check G1
+43. If G1 passes:
     → Update PROJECT_STATE.md: status = ready_for_human_approval
     → Print final summary
-40. If G1 fails:
+44. If G1 fails:
     → List remaining issues
     → Flag for human intervention
 ```

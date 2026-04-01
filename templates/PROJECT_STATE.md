@@ -44,6 +44,17 @@ pending
 - **Constraints**: pending
 - **Implementation Guidance**: pending
 
+## ARS Toolchain
+- **Codex MCP**: pending
+- **Codex MCP Note**: pending
+- **npm/npx**: pending
+- **WebSearch**: pending
+- **arXiv**: pending
+- **Semantic Scholar**: pending
+- **Git**: pending
+- **Cross-Model Review**: pending
+- **Toolchain Checked**: pending
+
 ## Checkpoints
 - [ ] Phase 1: Planning
 - [ ] Phase 2: Literature
@@ -63,6 +74,14 @@ pending
 - MAX_REVIEW_ROUNDS: 6
 - MAX_EXPERIMENT_HOURS: 8
 - POSITIVE_THRESHOLD: 7
+
+## Review Policy
+- DEFAULT_MODE: selective
+- MANDATORY_REVIEW_GATES: C1, F1, G1
+- TRIGGER_REVIEW_ENABLED: true
+- HIGH_COST_EXPERIMENT_THRESHOLD_HOURS: 2
+- STAGNATION_TRIGGER_ROUNDS: 2
+- TRIGGER_CONDITIONS: high_cost, novelty_uncertainty, anomalous_result, evaluator_risk, fairness_risk, review_stall, high_severity_claim
 
 ### Auto-Loop Settings
 - AUTO_LOOP_EXPERIMENTS: true

@@ -21,6 +21,10 @@ before the paper is considered ready.
 **Cross-model adversarial review**: Claude Code does the work, an external LLM
 (via Codex MCP) reviews it. No model grades its own homework.
 
+**Selective collaboration**: External review is concentrated at high-risk reasoning
+boundaries instead of every procedural step. Routine execution stays single-model;
+critical gates and triggered escalations get cross-model scrutiny.
+
 **Quality gates**: 7 mandatory checkpoints (A0→G1) that block progression until
 conditions are met. No shortcuts.
 
@@ -95,6 +99,15 @@ claude> /ars-05-implementation-review
 /ars-11-gate-check G1
   → Final verification: either passes the full package or returns the remaining blockers
 ```
+
+## Review Policy
+
+ARS uses **selective cross-model collaboration**:
+- **Default**: Claude handles routine execution alone
+- **Mandatory external review**: Gates `C1`, `F1`, `G1`
+- **Triggered external review**: novelty uncertainty, high-cost experiments, high/critical claims, fairness/evaluator risk, stalled review loops, or anomalous results
+
+This keeps external review focused on high-risk reasoning boundaries instead of every procedural step.
 
 ### 4. Fully Automatic Mode
 

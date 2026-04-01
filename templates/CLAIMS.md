@@ -11,6 +11,8 @@
   - type: novel_contribution | comparative_result | methodological | limitation | future_work | background_fact
   - severity_if_wrong: low | medium | high | critical
   - status: drafted | needs_evidence | needs_review | approved | rejected | revised
+  - review_required: yes | no
+  - external_review_status: pending | passed | failed | not_needed
   - evidence: [EVD-xxx], [EVD-xxx]
   - section: {paper section where this claim appears}
 ```

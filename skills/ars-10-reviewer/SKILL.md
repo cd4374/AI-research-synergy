@@ -22,7 +22,10 @@ review, critique, score, evaluate, feedback, weakness, strength,
 ## Inputs
 
 - What to review: paper draft, experiment plan, code, analysis, or full project
-- `NARRATIVE.md`, `CLAIMS.md`, `EVIDENCE.md` for context
+- `PROJECT_STATE.md` for review policy (`MANDATORY_REVIEW_GATES`, trigger conditions, thresholds)
+- `CLAIMS.md` for `review_required` and `external_review_status`
+- `EXPERIMENT_LOG.md` for `review gate` and `escalation reason`
+- `NARRATIVE.md`, `EVIDENCE.md` for context
 - `REVIEW_LOG.md` for prior review history
 - (Optional) Specific gate to review against
 
@@ -37,10 +40,20 @@ REVIEW CONTEXT:
 - Project goal: {from PROJECT_STATE.md}
 - Current phase: {phase}
 - What's being reviewed: {specific artifact or milestone}
+- Review mode: mandatory | triggered
+- Review policy: {mandatory gates, trigger conditions, thresholds}
 - Prior review scores: {from REVIEW_LOG.md}
 - Key claims: {from CLAIMS.md}
+- Claims requiring external review: {all claims with review_required: yes and external_review_status != passed}
+- Escalated experiments: {all experiments with review gate != none or escalation reason != none}
 - Available evidence: {summary from EVIDENCE.md}
 ```
+
+Consumption rules:
+- If the current gate is listed in `MANDATORY_REVIEW_GATES`, mark the review as `mandatory`
+- If any claim has `review_required: yes`, prioritize reviewing those claims first
+- If any experiment has an `escalation reason`, focus the review on that risk
+- When a review resolves a required external check, update the corresponding claim/review status in outputs
 
 Attach the actual artifact to review (paper draft, code, analysis, etc.).
 
@@ -116,6 +129,14 @@ All of the above, plus:
 
 ### Step 3 — Call External LLM via Codex MCP
 
+Before calling, check `PROJECT_STATE.md` → `ARS Toolchain.Cross-Model Review`:
+- If `full` → proceed with Codex MCP as normal
+- If `degraded_self_review` → skip Codex MCP, run self-review with explicit disclaimer:
+  > ⚠️ **Degraded Mode**: Codex MCP is unavailable (`{Codex MCP status}`). This review
+  > was performed by Claude on its own work and does NOT meet the cross-model review
+  > requirement. Gate passage in degraded mode is permitted only if this was recorded
+  > during `/ars-02-environment` and acknowledged by the user.
+
 Submit the review context + rubric to Codex MCP:
 
 ```
@@ -158,7 +179,10 @@ Parse the external LLM's response. Append to `REVIEW_LOG.md`:
 ```markdown
 ## Review Round {N} — {date}
 - **Reviewer**: Codex MCP ({model_name})
+- **Review Type**: {mandatory|triggered}
 - **Gate**: {gate_id}
+- **Artifact Reviewed**: {artifact}
+- **Escalation Reason**: {none|high_cost|novelty_uncertainty|evaluator_risk|fairness_risk|anomalous_result|review_stall}
 - **Overall Score**: {score}/10
 - **Verdict**: {accept|revise|reject}
 
@@ -191,6 +215,12 @@ For each weakness:
 - `major` → Should fix. Create task in `PROJECT_STATE.md`.
 - `minor` → Nice to fix. Add to backlog.
 
+Field-consumption updates:
+- If a reviewed claim passes external scrutiny, set `external_review_status: passed`
+- If a reviewed claim fails or remains unsupported, set `external_review_status: failed` or leave as `pending`
+- If a trigger came from an experiment, preserve the `review gate` / `escalation reason` trail in `REVIEW_LOG.md`
+- Use `PROJECT_STATE.md` review thresholds to decide whether the review loop should continue or stop
+
 Update `PROJECT_STATE.md` task backlog with new tasks.
 
 ### Step 6 — Check Stopping Condition
@@ -205,6 +235,7 @@ If this is part of an auto-review loop:
 
 - Review entry in `REVIEW_LOG.md`
 - Action items added to `PROJECT_STATE.md`
+- Updated claim review statuses for claims that required external review
 - Gate pass/fail status
 
 ## Boundaries

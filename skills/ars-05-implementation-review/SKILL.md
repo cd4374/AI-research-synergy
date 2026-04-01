@@ -7,7 +7,9 @@ description: Audit spec-to-code fidelity and evaluation integrity.
 
 > **Role**: Review whether code faithfully implements the intended research
 > method and evaluation protocol. Uses Codex MCP for adversarial spec-to-code
-> review when available. Never implements fixes or runs experiments.
+> review when available. Intended as a targeted pre-run audit for high-risk
+> implementation or evaluation paths, not a default step for every routine change.
+> Never implements fixes or runs experiments.
 
 ## Trigger Keywords
 

@@ -30,6 +30,10 @@ gate, gate-check, quality gate, check gate, verify gate, 质量门, 检查
 - [ ] `PROJECT_STATE.md` includes a populated `Runtime Environment` section
 - [ ] A target environment and final selected mode are recorded
 - [ ] A conda decision is recorded (reuse/new, env name, Python version)
+- [ ] `PROJECT_STATE.md` includes a populated `ARS Toolchain` section (written by `/ars-02-environment`)
+- [ ] `ARS Toolchain.Toolchain Checked` is a non-empty date (proves the check actually ran)
+- [ ] If `ARS Toolchain.Codex MCP` is `misconfigured` → gate fails; user must fix before proceeding
+- [ ] If `ARS Toolchain.Codex MCP` is `unavailable` or `installable` → gate passes, but `Cross-Model Review` must be recorded as `degraded_self_review`; mandatory review gates (C1/F1/G1) will use self-review fallback with disclaimer
 - [ ] Research questions are stated as specific, verifiable statements
 - [ ] At least one success criterion is quantitative
 - [ ] At least one baseline is identified
@@ -62,7 +66,8 @@ gate, gate-check, quality gate, check gate, verify gate, 质量门, 检查
 - [ ] Each comparison experiment uses the same dataset/split as baselines
 - [ ] Statistical plan stated (which tests, how many seeds)
 - [ ] Compute estimate within budget
-- [ ] `/ars-10-reviewer` has reviewed the experiment plan (score ≥ 6)
+- [ ] `PROJECT_STATE.md` marks `C1` as a mandatory review gate
+- [ ] `/ars-10-reviewer` has reviewed the experiment plan (score ≥ 6, review_type = mandatory)
 
 ---
 
@@ -90,6 +95,7 @@ gate, gate-check, quality gate, check gate, verify gate, 质量门, 检查
 - [ ] Negative results documented (not hidden)
 - [ ] Anomalies flagged if present
 - [ ] Evidence items have `stats` field where applicable
+- [ ] If any experiment has `review gate: E1-trigger` or a non-`none` escalation reason, a matching triggered review exists in `REVIEW_LOG.md`
 
 ---
 
@@ -104,11 +110,13 @@ gate, gate-check, quality gate, check gate, verify gate, 质量门, 检查
   - All claims in Conclusion: 100% must reference Results claims
   - All claims with `severity_if_wrong: high|critical`: must have `direct` evidence
   - Claims with status `needs_evidence`: ZERO allowed
+  - All claims with `review_required: yes`: must have `external_review_status: passed`
 - [ ] Citation check: no `TODO: verify citation` markers remain
 - [ ] `paper/references.bib` exists
 - [ ] No fabricated citations (spot-check 3 random references)
 - [ ] Figures referenced in text exist in `figures/`
-- [ ] `/ars-10-reviewer` has reviewed the draft (score ≥ 6)
+- [ ] `PROJECT_STATE.md` marks `F1` as a mandatory review gate
+- [ ] `/ars-10-reviewer` has reviewed the draft (score ≥ 6, review_type = mandatory)
 
 ---
 
@@ -117,7 +125,8 @@ gate, gate-check, quality gate, check gate, verify gate, 质量门, 检查
 
 **Conditions:**
 - [ ] ALL previous gates (A0–F1) passed
-- [ ] `/ars-10-reviewer` final review score ≥ 7
+- [ ] `PROJECT_STATE.md` marks `G1` as a mandatory review gate
+- [ ] `/ars-10-reviewer` final review score ≥ 7 (review_type = mandatory)
 - [ ] Claim coverage: 100% across all sections
 - [ ] Evidence chain intact: every claim → evidence → artifact → experiment
 - [ ] Code artifact exists and has `README_run.md`
@@ -125,6 +134,7 @@ gate, gate-check, quality gate, check gate, verify gate, 质量门, 检查
 - [ ] `EXPERIMENT_LOG.md` is complete
 - [ ] No open action items with severity `fatal` or `major`
 - [ ] `DECISIONS.md` documents any pivots that occurred
+- [ ] No triggered review requirement remains unresolved in `CLAIMS.md`, `EXPERIMENT_LOG.md`, or `REVIEW_LOG.md`
 
 ## Procedure
 
@@ -147,17 +157,28 @@ Read CLAIMS.md:
   covered_claims = count claims with ≥ 1 evidence link
   high_severity_covered = count high/critical claims with direct evidence
   needs_evidence_count = count claims with status needs_evidence
+  required_external_review = count claims with review_required: yes
+  passed_external_review = count required claims with external_review_status: passed
 
   coverage_rate = covered_claims / total_claims
-  blocking = needs_evidence_count > 0 OR high_severity not fully covered
+  blocking = needs_evidence_count > 0 OR high_severity not fully covered OR passed_external_review != required_external_review
 
 Report:
   "Claim Coverage: {covered}/{total} ({rate}%)"
   "High-severity coverage: {high_covered}/{high_total}"
+  "External review coverage: {passed_external_review}/{required_external_review}"
   "Blocking issues: {count}"
 ```
 
-### Step 4 — Report
+### Step 4 — Check Selective Review Consistency
+
+Before reporting, verify that:
+1. Every gate listed in `MANDATORY_REVIEW_GATES` has a matching `mandatory` review entry in `REVIEW_LOG.md`
+2. Every claim with `review_required: yes` has a terminal external review status
+3. Every experiment with `review gate != none` or `escalation reason != none` has a corresponding triggered review record
+4. No unresolved trigger remains at G1
+
+### Step 5 — Report
 
 Output a structured gate report:
 
@@ -184,7 +205,7 @@ Output a structured gate report:
 {what needs to happen to pass this gate}
 ```
 
-### Step 5 — Update Project State
+### Step 6 — Update Project State
 
 Update `PROJECT_STATE.md`:
 - If passed: advance phase, record gate passage date

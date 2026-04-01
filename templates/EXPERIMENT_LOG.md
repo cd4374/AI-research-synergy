@@ -16,6 +16,8 @@
 - **Estimated GPU-hours**: {estimate}
 - **Actual duration**: {wall clock}
 - **Server**: local | {server_name}
+- **Review gate**: none | C1-trigger | D1-trigger | E1-trigger | F1-trigger | G1
+- **Escalation reason**: none | high_cost | novelty_uncertainty | evaluator_risk | fairness_risk | anomalous_result | review_stall
 
 ### Results (if completed)
 | Metric | Seed 42 | Seed 123 | Seed 456 | Mean ± Std |
